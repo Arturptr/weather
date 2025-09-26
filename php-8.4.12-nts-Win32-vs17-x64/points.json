@@ -1,0 +1,47 @@
+[
+    {
+        "id": 1,
+        "lat": 53.46189,
+        "lng": 76.093242,
+        "temperature": 6,
+        "humidity": 2,
+        "description": "про",
+        "created_at": "2025-09-22 16:32:59"
+    },
+    {
+        "id": 2,
+        "lat": 50.769818,
+        "lng": 75.106126,
+        "temperature": 99,
+        "humidity": 1,
+        "description": "пиртьлтимситьб",
+        "created_at": "2025-09-22 16:33:59"
+    },
+    {
+        "id": 3,
+        "lat": 48.300736,
+        "lng": 76.576384,
+        "temperature": 0.32,
+        "humidity": 6513,
+        "description": "митьимирольд",
+        "created_at": "2025-09-22 16:35:16"
+    },
+    {
+        "id": 4,
+        "lat": 48.714163,
+        "lng": 68.513957,
+        "temperature": 56,
+        "humidity": 7,
+        "description": "тото",
+        "created_at": "2025-09-25 14:47:35"
+    },
+    {
+        "id": 5,
+        "lat": 46.024431,
+        "lng": 63.772989,
+        "temperature": 444,
+        "humidity": 12,
+        "description": "вававава",
+        "created_at": "2025-09-26 10:46:43"
+    }
+]

@@ -1,0 +1,30 @@
+[
+    {
+        "lat": "54.900725",
+        "lng": "69.117393",
+        "temperature": "45",
+        "humidity": "32",
+        "created_at": "2025-09-21 14:23:41"
+    },
+    {
+        "lat": "54.900725",
+        "lng": "69.117393",
+        "temperature": "45",
+        "humidity": "32",
+        "created_at": "2025-09-21 14:24:47"
+    },
+    {
+        "lat": "50.827452",
+        "lng": "71.547652",
+        "temperature": "5",
+        "humidity": "111",
+        "created_at": "2025-09-21 14:24:59"
+    },
+    {
+        "lat": null,
+        "lng": null,
+        "temperature": "7777",
+        "humidity": "4844",
+        "created_at": "2025-09-21 14:35:54"
+    }
+]
