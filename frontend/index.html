@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Прогноз — демо (React без Node)</title>
+
+  <!-- Leaflet CSS (карта) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    /* Простая стилизация, соответствующая вашей разметке */
+    body { font-family: Arial, Helvetica, sans-serif; margin: 20px; background: #fff; color:#222;}
+    .container { max-width: 1000px; margin: 0 auto; border: 3px solid #5b2d9a; padding: 14px; display:flex; gap:16px; }
+    .sidebar { width: 200px; padding-right:12px; }
+    .sidebar h2 { margin:0 0 10px; color:#5b2d9a; }
+    .menu-item { padding:8px 10px; margin-bottom:8px; border-radius:6px; cursor:pointer; border:1px solid transparent; }
+    .menu-item.active { background:#efd9ff; border-color:#d5b7ff; }
+    .main { flex:1; }
+
+    /* Красная область — карта */
+    .mapBox { border:4px solid #ff7b7b; border-radius:8px; height:240px; overflow:hidden; }
+
+    /* строка с контролами (синее/зелёное/жёлтое) */
+    .controls { display:flex; gap:8px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+    .input-loc { background:#d9ecff; padding:8px; border:1px solid #b5dbff; border-radius:6px; min-width:160px; }
+    .dateInput { background:#e9f9d6; padding:8px; border:1px solid #cfe9b6; border-radius:6px; }
+    .btn-forecast { background:#fff7c2; padding:8px 12px; border:1px solid #f0d86a; border-radius:6px; cursor:pointer; }
+
+    /* серая область вывода */
+    .resultBox { margin-top:12px; min-height:160px; background:#f2f2f3; padding:12px; border-radius:8px; overflow:auto; }
+    .dayRow { padding:8px 6px; border-bottom:1px solid #e0e0e1; }
+
+    /* Подсказка */
+    .hint { color:#666; font-size:14px; margin-top:8px; }
+
+    /* Leaflet контейнер занимает весь .mapBox */
+    #map { width:100%; height:100%; }
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React + ReactDOM UMD -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Babel (чтобы писать JSX прямо в HTML без сборщика) -->
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function App(){
+      const [page, setPage] = useState('forecast');
+      return (
+        <div className="container">
+          <aside className="sidebar">
+            <h2>Меню</h2>
+            <div className={"menu-item "+(page==='forecast'?'active':'')} onClick={()=>setPage('forecast')}>Прогноз</div>
+            <div className={"menu-item "+(page==='mission'?'active':'')} onClick={()=>setPage('mission')}>Наша миссия</div>
+            <div className={"menu-item "+(page==='facts'?'active':'')} onClick={()=>setPage('facts')}>Интересные факты</div>
+          </aside>
+
+          <main className="main">
+            {page==='forecast' && <ForecastPage />}
+            {page==='mission' && <MissionPage />}
+            {page==='facts' && <FactsPage />}
+          </main>
+        </div>
+      );
+    }
+
+    function ForecastPage(){
+      const [location, setLocation] = useState('');
+      const [coords, setCoords] = useState(null); // {lat, lon}
+      const [dateFrom, setDateFrom] = useState('');
+      const [dateTo, setDateTo] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [forecast, setForecast] = useState(null);
+      const mapRef = useRef(null);
+      const markerRef = useRef(null);
+
+      // Инициализация Leaflet карты один раз
+      useEffect(()=>{
+        if(!mapRef.current){
+          const map = L.map('map', { center: [55.0, 73.0], zoom: 4 });
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+          }).addTo(map);
+          mapRef.current = map;
+        }
+      }, []);
+
+      // При изменении coords — центрируем карту и ставим маркер
+      useEffect(()=>{
+        if(mapRef.current && coords){
+          mapRef.current.setView([coords.lat, coords.lon], 9);
+          if(markerRef.current){
+            markerRef.current.setLatLng([coords.lat, coords.lon]);
+          } else {
+            markerRef.current = L.marker([coords.lat, coords.lon]).addTo(mapRef.current);
+          }
+        }
+      }, [coords]);
+
+      // Геокодирование текстовой локации через Nominatim
+      async function geocodeLocation(q){
+        if(!q) return null;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+        try{
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+          const data = await res.json();
+          if(data && data.length > 0){
+            return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
+          }
+          return null;
+        } catch(e){
+          console.error('geocode error', e);
+          return null;
+        }
+      }
+
+      // Нажатие кнопки "Прогноз"
+      async function handleForecast(){
+        setForecast(null);
+        if(!dateFrom || !dateTo){ alert('Выберите даты (с и по)'); return; }
+        if(dateFrom > dateTo) { alert('Дата начала больше даты конца'); return; }
+
+        setLoading(true);
+
+        let c = coords;
+        if(!c){
+          // попытаемся геокодировать по введённому городу
+          const g = await geocodeLocation(location);
+          if(g){ c = { lat: g.lat, lon: g.lon }; setCoords(c); }
+          else {
+            // fallback: попробовать геолокацию браузера
+            try{
+              const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject));
+              c = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+              setCoords(c);
+            } catch(err){
+              setLoading(false);
+              alert('Не удалось определить координаты. Введите локацию текстом (город).');
+              return;
+            }
+          }
+        }
+
+        // Запрос к Open-Meteo (hourly)
+        const api = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}` +
+                    `&hourly=temperature_2m,relativehumidity_2m,precipitation&start_date=${dateFrom}&end_date=${dateTo}&timezone=auto`;
+        try{
+          const res = await fetch(api);
+          const data = await res.json();
+          // агрегируем по дате: средняя температура, средняя влажность, сумма осадков
+          if(!data.hourly){ throw new Error('Нет hourly данных'); }
+          const times = data.hourly.time;
+          const temps = data.hourly.temperature_2m;
+          const hums = data.hourly.relativehumidity_2m;
+          const precs = data.hourly.precipitation;
+          const byDate = {};
+          for(let i=0;i<times.length;i++){
+            const day = times[i].slice(0,10);
+            if(!byDate[day]) byDate[day] = { t:[], h:[], p:[] };
+            byDate[day].t.push(temps[i]);
+            byDate[day].h.push(hums[i]);
+            byDate[day].p.push(precs[i]);
+          }
+          const days = Object.keys(byDate).map(d => {
+            const arr = byDate[d];
+            const avg = a => Math.round((a.reduce((s,v)=>s+v,0)/a.length)*10)/10;
+            const sum = a => Math.round((a.reduce((s,v)=>s+v,0))*10)/10;
+            return { date: d, tempAvg: avg(arr.t), humidityAvg: avg(arr.h), precipitationSum: sum(arr.p) };
+          });
+          setForecast({ meta:{ lat:c.lat, lon:c.lon }, days });
+        } catch(e){
+          console.error(e);
+          alert('Ошибка при получении прогноза: ' + e.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      return (
+        <div>
+          <div className="mapBox">
+            <div id="map"></div>
+          </div>
+
+          <div className="controls">
+            <input className="input-loc" placeholder="Локация (город, например: Almaty)" value={location} onChange={e=>setLocation(e.target.value)} />
+            <input className="dateInput" type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} />
+            <input className="dateInput" type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} />
+            <button className="btn-forecast" onClick={handleForecast}>{ loading ? 'Загрузка...' : 'Прогноз' }</button>
+          </div>
+
+          <div className="resultBox">
+            {!forecast && !loading && <div>Нажмите «Прогноз», чтобы увидеть данные по температуре, осадкам и влажности.</div>}
+            {loading && <div>Получаем прогноз...</div>}
+            {forecast && (
+              <div>
+                <h3>Прогноз для {forecast.meta.lat.toFixed(3)},{forecast.meta.lon.toFixed(3)}</h3>
+                {forecast.days.map(d => (
+                  <div className="dayRow" key={d.date}>
+                    <strong>{d.date}</strong>
+                    <div>Средняя температура: {d.tempAvg} °C</div>
+                    <div>Сумма осадков: {d.precipitationSum} мм</div>
+                    <div>Средняя влажность: {d.humidityAvg} %</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="hint">
+            Подсказка: если не вводите город — будет попытка взять геолокацию браузера. Для более точного геокодинга можно заменить Nominatim на другую службу.
+          </div>
+        </div>
+      );
+    }
+
+    function MissionPage(){
+      return (
+        <div>
+          <h2>Наша миссия</h2>
+          <p>Тут можно разместить текст миссии — отредактируйте прямо в компоненте MissionPage (в index.html).</p>
+        </div>
+      );
+    }
+
+    function FactsPage(){
+      return (
+        <div>
+          <h2>Интересные факты</h2>
+          <ul>
+            <li>Факт 1 — пример.</li>
+            <li>Факт 2 — пример.</li>
+            <li>Факт 3 — пример.</li>
+          </ul>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
