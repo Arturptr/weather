@@ -1,0 +1,10 @@
+body {
+  background-color: violet;
+  color: black;
+}
+
+.header {
+  background-color: rgb(195, 0, 255); /* правильно */
+  padding: 20px;
+}
+
