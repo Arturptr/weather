@@ -1,16 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>React JS</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body>
-  <div id="app"></div>
-  <!-- load your React code -->
-  <script src="js/index.js" type="text/babel"></script>
-</body>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>React без Node.js</title>
+
+    <!-- Стили -->
+    <link rel="stylesheet" href="css/main.css" />
+
+    <!-- React и ReactDOM (18 версия) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel для JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- React код -->
+    <script type="text/babel">
+      function Header(props) {
+        return <header className="header">{props.title}</header>
+      }
+
+      function App() {
+        const helpText = "Бобинь "
+
+        const inputClick = () => console.log("Clicked")
+        const mouseOver = () => console.log("Mouse Over")
+
+        return (
+          <div>
+            <Header title="Шапка профиля" />
+            <Header title="Выходите бесы" />
+            <Header title="Мы станцуем джерси" />
+
+            <h1>{helpText}</h1>
+            <input 
+              placeholder={helpText}
+              onClick={inputClick}
+              onMouseEnter={mouseOver} 
+            />
+            <p>{helpText === "Бобинь " ? "yes" : "no"}</p>
+
+            {/* Картинка из папки img */}
+            <img src="img/qqq.jpg" alt="Моя картинка" width="200" />
+          </div>
+        )
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("app"))
+      root.render(<App />)
+    </script>
+  </body>
 </html>
