@@ -15,4 +15,4 @@ def get_forecast(city: str, date: str):
             "temperature": {"min": 20, "max": 28},
             "wind_speed": 10
         }
-    }
+    }  #uvicorn main:app --reload    --- запуск кода
